@@ -1,3 +1,5 @@
+
+    
 import numpy as np
 from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
@@ -40,8 +42,8 @@ class BNetwork:
         var_card = len(self.nodes[node_id]["outcomes"])
         cpt_values = np.array(cpt_values)
         if cpt_values.shape != (var_card, np.prod(parent_cards)):
-            raise ValueError(f"Incorrect format for {node_id}. Expected {(var_card, np.prod(parent_cards))}, but received {cpt_values.s
-    cpd = TabularCPD(
+            raise ValueError(f"Incorrect format for {node_id}. Expected {(var_card, np.prod(parent_cards))}, but received {cpt_values.shape}")
+        cpd = TabularCPD(
             variable=node_id,
             variable_card=var_card,
             values=cpt_values.tolist(),
