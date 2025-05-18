@@ -292,5 +292,5 @@ def carregar_amostras_json(caminho_arquivo='repository.json'):
             repository[estado]['amostras'] = np.array(repository[estado]['amostras'])
         return repository
 
-# Exemplo de uso
+# Example of use
 repository = carregar_amostras_json()
