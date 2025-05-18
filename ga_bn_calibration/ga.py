@@ -1,4 +1,4 @@
-from bn_as_fitness_v2 import misturar_e_transformar_com_tnormal, repository, functions
+from bn_as_fitness_v2 import mix_and_transform_with_tnormal, repository, functions
 
 import random       
 import numpy as np
@@ -37,7 +37,7 @@ class Individuo:
    
         for c in expert_data:
             estados_pais = [c["AT"], c["AC"]]
-            probs_model = misturar_e_transformar_com_tnormal(
+            probs_model = mix_and_transform_with_tnormal(
                 estados_pais, self.pesos, repository,
                 variance=self.variancia,
                 func_comb=functions[self.funcao]
