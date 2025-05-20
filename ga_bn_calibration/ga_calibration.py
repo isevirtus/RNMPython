@@ -1,15 +1,50 @@
-from bn_as_fitness_v2 import mix_and_transform_with_tnormal, repository, functions
+from bn_as_fitness import mix_and_transform_with_tnormal, repository, functions
 
 import random       
 import numpy as np
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 import time
+import csv
 
 
-
-# Expert Data
-expert_data = [
+TPN1 = [
+    {"AT": "VL", "AC": "VH", "AE": "VL", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VH", "AC": "VL", "AE": "VL", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VL", "AC": "VL", "AE": "VH", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VL", "AC": "VH", "AE": "VH", "AE_expert": [0, 0, 1, 0, 0]},
+    {"AT": "VH", "AC": "VL", "AE": "VH", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VH", "AC": "VH", "AE": "VL", "AE_expert": [0, 0, 1, 0, 0]}
+]
+TPN2 = [
+    {"AT": "VL", "AC": "VH", "AE": "VL", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VH", "AC": "VL", "AE": "VL", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VL", "AC": "VL", "AE": "VH", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VL", "AC": "VH", "AE": "VH", "AE_expert": [0, 0, 1, 0, 0]},
+    {"AT": "VH", "AC": "VL", "AE": "VH", "AE_expert": [0, 0, 1, 0, 0]},
+    {"AT": "VH", "AC": "VH", "AE": "VL", "AE_expert": [0, 0, 1, 0, 0]}
+]
+TPN3 = [
+    {"AT": "VL", "AC": "VH", "AE": "VL", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VH", "AC": "VL", "AE": "VL", "AE_expert": [1, 0, 0, 0, 0]},
+    {"AT": "VL", "AC": "VL", "AE": "VH", "AE_expert": [1, 0, 0, 0, 0]},
+    {"AT": "VL", "AC": "VH", "AE": "VH", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VH", "AC": "VL", "AE": "VH", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VH", "AC": "VH", "AE": "VL", "AE_expert": [0, 1, 0, 0, 0]}
+]
+TPN4 = [
+    {"AT": "VL", "AC": "VH", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VH", "AC": "VL", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VL", "AC": "M",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "M",  "AC": "VL", "AE_expert": [0, 1, 0, 0, 0]}
+]
+TPN5 = [
+    {"AT": "VL", "AC": "VH", "AE_expert": [0, 0, 0, 1, 0]},
+    {"AT": "VH", "AC": "VL", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VL", "AC": "M",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "M",  "AC": "VL", "AE_expert": [0, 1, 0, 0, 0]}
+]
+AT_AC_AE = [
     {"AT": "VL", "AC": "VH", "AE_expert": [0.274, 0.323, 0.274, 0.081, 0.048]},
     {"AT": "VH", "AC": "VL", "AE_expert": [0.172, 0.259, 0.345, 0.172, 0.052]},
     {"AT": "VL",  "AC": "VL",  "AE_expert": [0.333, 0.333, 0.283, 0.050, 0.0]},
@@ -17,109 +52,168 @@ expert_data = [
     {"AT": "VL",  "AC": "M", "AE_expert": [0.2, 0.3, 0.34, 0.1, 0.06]},
     {"AT": "M",   "AC": "VL", "AE_expert": [0.357, 0.357, 0.179, 0.107, 0.0]},
 ]
+expert_data = TPN3  # or TPN1, TPN2...
 
-def gerar_pesos(n_pais):
-    return np.random.randint(1, 6, size=n_pais)  # Valores entre 1 e 5 
+def generate_weights(n_parents):
+    return np.random.randint(1, 6, size=n_parents)  # Values between 1 and 5 
 
+variances = [0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5]
 
-variancias = [0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5]
-# Representação do Indivíduo
-class Individuo:
-    def __init__(self, n_pais):
-        self.funcao = random.choice(list(functions.keys()))
-        self.pesos = gerar_pesos(n_pais)
-        self.variancia = random.choice(variancias)
+# Individual representation
+class Individual:
+    def __init__(self, n_parents):
+        self.function = random.choice(list(functions.keys()))
+        self.weights = generate_weights(n_parents)
+        self.variance = random.choice(variances)
         self.fitness = None
 
-    def avaliar(self, repository):
-        erros = []
-        #print(f"\n[Indivíduo] Função: {self.funcao} | Pesos: {self.pesos} | Variância: {self.variancia}")
-   
+    def evaluate(self, repository, verbose=False):
+        errors = []
+        self.probs_per_scenario = []  # List to save results
+
         for c in expert_data:
-            estados_pais = [c["AT"], c["AC"]]
+            if "AE" in c:
+                parent_states = [c["AT"], c["AC"], c["AE"]]
+            else:
+                parent_states = [c["AT"], c["AC"]]
+
             probs_model = mix_and_transform_with_tnormal(
-                estados_pais, self.pesos, repository,
-                variance=self.variancia,
-                func_comb=functions[self.funcao]
+                parent_states, self.weights, repository,
+                variance=self.variance,
+                func_comb=functions[self.function]
             )
-            #print(f"  AT={estados_pais[0]}, AC={estados_pais[1]} → Probs: {probs_model}")
-            erro = mean_squared_error(c["AE_expert"], probs_model)
-            erros.append(erro)
-        self.fitness = np.mean(erros)
+
+            error = mean_squared_error(c["AE_expert"], probs_model)
+            errors.append(error)
+
+            self.probs_per_scenario.append({
+                "scenario": parent_states,
+                "expected": c["AE_expert"],
+                "calculated": probs_model.tolist(),
+                "brier": error
+            })
+
+            if verbose:
+                print(f"Scenario: {parent_states}")
+                print(f"Expected: {c['AE_expert']}")
+                print(f"Calculated: {np.round(probs_model, 4).tolist()}")
+                print(f"Brier Score: {error:.5f}\n")
+
+        self.fitness = np.mean(errors)
         return self.fitness
 
-# Inicialização da População
-def inicializar_populacao(tam_pop, n_pais):
-    return [Individuo(n_pais) for _ in range(tam_pop)]
+def export_results_excel_like(individual):
+    print("\nVarA\tVarB\tVL\tL\tM\tH\tVH\tVL\tL\tM\tH\tVH\tBrier")
+    for r in individual.probs_per_scenario:
+        a, b = r["scenario"][:2]
+        expected = "\t".join(str(e) for e in r["expected"])
+        calculated = "\t".join(f"{p:.3f}" for p in r["calculated"])
+        print(f"{a}\t{b}\t{expected}\t{calculated}\t{r['brier']:.5f}")
 
-# Seleção por Torneio
-def selecao_torneio(populacao, k=3):
-    return min(random.sample(populacao, k), key=lambda ind: ind.fitness)
+# Population Initialization
+def initialize_population(pop_size, n_parents):
+    return [Individual(n_parents) for _ in range(pop_size)]
 
-# Crossover de 1 Ponto
-def crossover(pai1, pai2):
-    filho = Individuo(len(pai1.pesos))
-    filho.funcao = pai1.funcao if random.random() < 0.5 else pai2.funcao
-    ponto = random.randint(1, len(pai1.pesos) - 1)
-    filho.pesos = np.concatenate((pai1.pesos[:ponto], pai2.pesos[ponto:]))
-    #filho.pesos = np.round(filho.pesos / np.sum(filho.pesos), 2) #REMOVIDA A NORMALIZACÃO
-    filho.variancia = random.choice([pai1.variancia, pai2.variancia])
-    return filho
+# Tournament Selection
+def tournament_selection(population, k=3):
+    return min(random.sample(population, k), key=lambda ind: ind.fitness)
 
-# Mutação
-def mutacao(ind, taxa_mutacao):
-    if random.random() < taxa_mutacao:
-        ind.funcao = random.choice(list(functions.keys()))
-    if random.random() < taxa_mutacao:
-        ind.pesos = gerar_pesos(len(ind.pesos))
-    if random.random() < taxa_mutacao:
-        ind.variancia = random.choice(variancias)
+# One-Point Crossover
+def crossover(parent1, parent2):
+    child = Individual(len(parent1.weights))
+    child.function = parent1.function if random.random() < 0.5 else parent2.function
+    point = random.randint(1, len(parent1.weights) - 1)
+    child.weights = np.concatenate((parent1.weights[:point], parent2.weights[point:]))
+    child.variance = random.choice([parent1.variance, parent2.variance])
+    return child
+
+# Mutation
+def mutation(ind, mutation_rate):
+    if random.random() < mutation_rate:
+        ind.function = random.choice(list(functions.keys()))
+    if random.random() < mutation_rate:
+        ind.weights = generate_weights(len(ind.weights))
+    if random.random() < mutation_rate:
+        ind.variance = random.choice(variances)
     return ind
 
-# Algoritmo Genético Principal
-def algoritmo_genetico(tam_pop, n_pais, max_gen, taxa_mutacao, repository, functions):
-    populacao = inicializar_populacao(tam_pop, n_pais)
-    for ind in populacao:
-        ind.avaliar(repository)
+# Main Genetic Algorithm
+def genetic_algorithm(pop_size, n_parents, max_gen, mutation_rate, repository, functions):
+    population = initialize_population(pop_size, n_parents)
+    for ind in population:
+        ind.evaluate(repository)
 
-    for geracao in range(max_gen):
-        nova_populacao = []
-        elite = min(populacao, key=lambda ind: ind.fitness)
-        nova_populacao.append(elite)  # Elitismo
+    for generation in range(max_gen):
+        new_population = []
+        elite = min(population, key=lambda ind: ind.fitness)
+        new_population.append(elite)  # Elitism
 
-        while len(nova_populacao) < tam_pop:
-            pai1 = selecao_torneio(populacao)
-            pai2 = selecao_torneio(populacao)
-            # ✅ Controle da Taxa de Cruzamento (80%)
+        while len(new_population) < pop_size:
+            parent1 = tournament_selection(population)
+            parent2 = tournament_selection(population)
             if random.random() < 0.8:
-                filho = crossover(pai1, pai2)
+                child = crossover(parent1, parent2)
             else:
-                filho = selecao_torneio(populacao)  # Replicação direta de um pai
-            
-            filho = mutacao(filho, taxa_mutacao)
-            filho.avaliar(repository)
-            nova_populacao.append(filho)
+                child = tournament_selection(population)
 
-        populacao = nova_populacao
+            child = mutation(child, mutation_rate)
+            child.evaluate(repository)
+            new_population.append(child)
+
+        population = new_population
         
-        # Logging
-        melhores = sorted(populacao, key=lambda ind: ind.fitness)
-        #print(f"[GEN {geracao}] Melhor Brier: {melhores[0].fitness:.5f} | Função: {melhores[0].funcao} | Pesos: {melhores[0].pesos} | Variância: {melhores[0].variancia}")
+        best = sorted(population, key=lambda ind: ind.fitness)
+        #print(f"[GEN {generation}] Best Brier: {best[0].fitness:.5f} | Function: {best[0].function} | Weights: {best[0].weights} | Variance: {best[0].variance}")
 
-    melhor = min(populacao, key=lambda ind: ind.fitness)
-    print("\nMelhor configuração encontrada:")
-    print(f"Função: {melhor.funcao}, Pesos: {melhor.pesos}, Variância: {melhor.variancia}, Brier Score: {melhor.fitness}")
-    return melhor
+    best = min(population, key=lambda ind: ind.fitness)
+    print("\nBest configuration found:")
+    print(f"Function: {best.function}, Weights: {best.weights}, Variance: {best.variance}, Brier Score: {best.fitness}")
+    print("\n📋 Probabilities and Brier Score per scenario:")
+    best.evaluate(repository, verbose=True)
+    return best
 
-# Exemplo de Execução
-inicio = time.time()
-melhor_ind = algoritmo_genetico(tam_pop=50, n_pais=2, max_gen=10, taxa_mutacao=0.1, repository=repository, functions=functions)
-print(melhor_ind)
-fim = time.time()
+# Execution Example
+start = time.time()
+n_parents = len([k for k in expert_data[0] if k.startswith("A") and k != "AE_expert"])
+best_ind = genetic_algorithm(pop_size=50, n_parents=n_parents, max_gen=10, mutation_rate=0.1, repository=repository, functions=functions)
 
+print(best_ind)
+end = time.time()
 
-print(f"Tempo de execução AG:  {fim - inicio:.4f} segundos")
+print(f"Execution time GA:  {end - start:.4f} seconds")
 
-minutos = int((fim - inicio) // 60)
-segundos = (fim - inicio) % 60
-print(f"Tempo de execução AG: {minutos} minutos e {segundos:.2f} segundos")
+minutes = int((end - start) // 60)
+seconds = (end - start) % 60
+print(f"Execution time GA: {minutes} minutes and {seconds:.2f} seconds")
+
+export_results_excel_like(best_ind)
+
+def save_results_csv(individual, filename="ga_results.csv"):
+    import csv
+
+    header = ["VarA", "VarB", "VL_exp", "L_exp", "M_exp", "H_exp", "VH_exp",
+              "VL_calc", "L_calc", "M_calc", "H_calc", "VH_calc", "Brier"]
+
+    with open(filename, mode="w", newline="", encoding="utf-8") as csv_file:
+        writer = csv.writer(csv_file, delimiter=';')
+        writer.writerow(header)
+
+        for r in individual.probs_per_scenario:
+            states = r["scenario"]
+            expected = r["expected"]
+            calculated = [f"{p:.5f}".replace('.', ',') for p in r["calculated"]]
+            brier = f"{r['brier']:.5f}".replace('.', ',')
+
+            if len(states) == 2:
+                row = [states[0], states[1]] + expected + calculated + [brier]
+            elif len(states) == 3:
+                row = [states[0], states[1], states[2]] + expected + calculated + [brier]
+                if len(header) == 13:
+                    header.insert(2, "VarC")
+                    writer.writerow(header)
+
+            writer.writerow(row)
+
+    print(f"\n✅ CSV saved to: {filename}")
+
+save_results_csv(best_ind)
