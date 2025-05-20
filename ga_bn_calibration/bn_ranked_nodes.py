@@ -300,7 +300,7 @@ repository = load_samples_json()
 
 
 #==============================================================================
-#             GERANDO PROBABILIDADES COM MELHOR CONFIG PRA TPN1 
+#             generating prob of best CONFIG for TPN
 #==============================================================================
 from sklearn.metrics import mean_squared_error
 
@@ -386,11 +386,11 @@ def save_validation_csv_auto(file_name, scenarios, pesos_2p, pesos_3p, function_
     function = functions[function_name]
     briers = []
 
-    # Detecta automaticamente se há 2 ou 3 pais
+    
     exemplo = scenarios[0]
     n_pais = len([k for k in exemplo if k.startswith("A") and k != "AE_expert"])
 
-    # Define os weights de acordo com a quantidade de pais
+    # Define weights according to n_pais
     weights = pesos_3p if n_pais == 3 else pesos_2p
 
     # Cabeçalho
