@@ -15,8 +15,8 @@ ga_bn_calibration/
 ├── ga_calibration.py             # Genetic Algorithm implementation
 ├── bn_ranked_nodes.py            # RNM-based Bayesian Network implementation
 ├── brute_force.py                # Brute-force calibration (for comparison purposes)
-├── repository.json               # Expert-elicited scenarios (JSON format)
-├── repository.pkl                # Same scenarios (binary format for fast loading)
+├── repository.json               # contain pre-generated numerical samples (JSON format)
+├── repository.pkl                # Same samples (binary format for fast loading)
 ├── data_validation_softcom.xlsx # Unified spreadsheet with scenarios and validation analyses
 ```
 
@@ -79,7 +79,9 @@ pip install numpy pandas matplotlib seaborn scikit-learn pgmpy
 ### 2. Input Files
 Ensure the following input files are present:
 
-- `repository.json` or `repository.pkl`: Contains the expert-elicited samples for each state.
+- `repository.json` or `repository.pkl`. 
+The files `repository.json` and `repository.pkl` contain pre-generated numerical samples for each linguistic state (VL, L, M, H, VH) of the input variables. These samples were drawn once and saved for reuse in calibration routines. The samples feed the aggregation and TNormal transformation process used to compute probabilistic outputs during fitness evaluation.
+
 - The Python modules: `bn_ranked_nodes.py`, `ga.py`, and `brute_force.py`
 
 ---
