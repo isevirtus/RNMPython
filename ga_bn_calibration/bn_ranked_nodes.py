@@ -138,7 +138,7 @@ def wmin(*args):
         denom = w_i + (n - 1)
         numerator = w_i * values[i] + (S - values[i])
         e_i = numerator / denom
-        current_min = np.minimum(current_min, e_i)  # Comparação elemento a elemento (alteracao feita no codigo)
+        current_min = np.minimum(current_min, e_i)  
 
     return current_min
 
@@ -156,7 +156,7 @@ def wmax(*args):
     for i in range(n):
         w_i = args[2 * i]
         x_i = args[2 * i + 1]
-        if w_i < 0 or not np.all((0 <= x_i) & (x_i <= 1)): #adaptando essa linha para trabalhar com vetores de amostras, e não com valores escalares.
+        if w_i < 0 or not np.all((0 <= x_i) & (x_i <= 1)): 
             return None
         weights.append(w_i)
         values.append(x_i)
@@ -178,7 +178,7 @@ def wmax(*args):
         denom = w_i + (n - 1)
         numerator = w_i * x_i + (sum_all - x_i)
         e_i = numerator / denom
-        if max_e is None: #adaptando aqui para comparar arrays posição a posição.
+        if max_e is None: 
             max_e = e_i
         else:
             max_e = np.maximum(max_e, e_i)
@@ -208,7 +208,7 @@ def mixminmax(*args):
     if sum(weights) == 0:
         return None
 
-    values_array = np.array(values)  # matriz N x amostras
+    values_array = np.array(values)  # matrix N x samples
     mins = np.min(values_array, axis=0)
     maxs = np.max(values_array, axis=0)
 
@@ -221,30 +221,30 @@ def mixminmax(*args):
 # Step 2 – Mixing with the chosen function and conversion using TNormal
 # ================================
 
-def mix_and_transform_with_tnormal(estados_pais, pesos, repository, variance, func_comb):
+def mix_and_transform_with_tnormal(parent_states, weights, repository, variance, func_comb):
     #Validation
-    if not estados_pais:
-        raise KeyError("estados_pais is empty")
+    if not parent_states:
+        raise KeyError("parent_states is empty")
 
-    pesos = np.array(pesos, dtype=float)
-    if len(pesos) != len(estados_pais):
-        raise ValueError("length mismatch between pesos and estados_pais")
-    if np.any(pesos < 0):
+    weights = np.array(weights, dtype=float)
+    if len(weights) != len(parent_states):
+        raise ValueError("length mismatch between weights and parent_states")
+    if np.any(weights < 0):
         raise ValueError("invalid weights (negative values)")
-    if np.sum(pesos) <= 0:
+    if np.sum(weights) <= 0:
         raise ValueError("invalid weights (sum ≤ 0)")
 
     amostras_por_pai = []
-    for estado in estados_pais:
+    for estado in parent_states:
         if estado not in repository:
             raise KeyError(f"Estado {estado} not in repository")
-        samples = repository[estado]['amostras']
+        samples = repository[estado]['samples']
         if len(samples) < 10000:
             raise ValueError("less than 10 000 samples")
         #amostras_por_pai.append(np.random.choice(samples, size=10000, replace=False))
         amostras_por_pai.append(np.array(samples[:10000]))
 
-    intercalado = [item for pair in zip(pesos, amostras_por_pai) for item in pair] #adaptado para empacotar pesos e amostras
+    intercalado = [item for pair in zip(weights, amostras_por_pai) for item in pair] 
     valores_continuos = func_comb(*intercalado)
 
     
@@ -257,10 +257,10 @@ def mix_and_transform_with_tnormal(estados_pais, pesos, repository, variance, fu
 
     mean = np.mean(valores_continuos)
     if variance <= 0:
-        variance = 0.0001 #ATRIBUINDO VALOR MINIMO PRA EVITAR ERERRO COM VARIANCIA NULA OU NEGATICA
+        variance = 0.0001 
     max_variance = mean * (1 - mean)
     if variance > max_variance:
-        variance = max(max_variance, 0.0001)  # garante limite mínimo pra variancia
+        variance = max(max_variance, 0.0001)  
         #raise ValueError("variance exceeds μ(1-μ)")
     std = np.sqrt(variance)
     
@@ -274,7 +274,7 @@ def mix_and_transform_with_tnormal(estados_pais, pesos, repository, variance, fu
     probs = np.round(probs, 3)
 
     if np.abs(np.sum(probs) - 1) > 1e-6:
-        probs /= np.sum(probs)  # Renormaliza
+        probs /= np.sum(probs)  
 
     return np.round(probs, 3)
 
@@ -286,13 +286,163 @@ functions = {
     "WMAX": wmax,
     "MIXMINMAX": mixminmax
 }
-def carregar_amostras_json(caminho_arquivo='repository.json'):
-    with open(caminho_arquivo, 'r', encoding='utf-8') as f:
+def load_samples_json(file_path='repository.json'):
+    with open(file_path, 'r', encoding='utf-8') as f:
         repository = json.load(f)
-        # Converte as listas de volta para arrays do NumPy
+        
         for estado in repository:
-            repository[estado]['amostras'] = np.array(repository[estado]['amostras'])
+            repository[estado]['samples'] = np.array(repository[estado]['samples'])
         return repository
 
 # Example of use
-repository = carregar_amostras_json()
+repository = load_samples_json()
+
+
+
+#==============================================================================
+#             GERANDO PROBABILIDADES COM MELHOR CONFIG PRA TPN1 
+#==============================================================================
+from sklearn.metrics import mean_squared_error
+
+TPN1_val = [
+    {"AT": "VH", "AC": "M",  "AE": "M",  "AE_expert": [0, 0, 1, 0, 0]},
+    {"AT": "VL", "AC": "VH", "AE": "L",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "L",  "AC": "H",  "AE": "VL", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "M",  "AC": "H",  "AE": "VL", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VL", "AC": "VL", "AE": "M",  "AE_expert": [1, 0, 0, 0, 0]},
+    {"AT": "VL", "AC": "VL", "AE": "VH", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "L",  "AC": "L",  "AE": "L",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VL", "AC": "L",  "AE": "M",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "H",  "AC": "L",  "AE": "M",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "M",  "AC": "L",  "AE": "M",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "M",  "AC": "VH", "AE": "VH", "AE_expert": [0, 0, 0, 1, 0]},
+    {"AT": "M",  "AC": "H",  "AE": "VH", "AE_expert": [0, 0, 0, 1, 0]}
+]
+
+TPN2_val = [
+    {"AT": "VH", "AC": "M",  "AE": "M",  "AE_expert": [0, 0, 1, 0, 0]},
+    {"AT": "VL", "AC": "VH", "AE": "L",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "L",  "AC": "H",  "AE": "VL", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "M",  "AC": "H",  "AE": "VL", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VL", "AC": "VL", "AE": "M",  "AE_expert": [1, 0, 0, 0, 0]},
+    {"AT": "VL", "AC": "VL", "AE": "VH", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "L",  "AC": "L",  "AE": "L",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VL", "AC": "L",  "AE": "M",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "H",  "AC": "L",  "AE": "M",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "M",  "AC": "L",  "AE": "M",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "M",  "AC": "VH", "AE": "VH", "AE_expert": [0, 0, 0, 1, 0]},
+    {"AT": "M",  "AC": "H",  "AE": "VH", "AE_expert": [0, 0, 0, 1, 0]}
+]
+
+TPN3_val = [
+    {"AT": "VH", "AC": "M", "AE": "M", "AE_expert": [0, 0, 1, 0, 0]},
+    {"AT": "VL", "AC": "VH", "AE": "L", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "L", "AC": "H", "AE": "VL", "AE_expert": [1, 0, 0, 0, 0]},
+    {"AT": "M", "AC": "H", "AE": "VL", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VL", "AC": "VL", "AE": "M", "AE_expert": [1, 0, 0, 0, 0]},
+    {"AT": "VL", "AC": "VL", "AE": "VH", "AE_expert": [1, 0, 0, 0, 0]},
+    {"AT": "L", "AC": "L", "AE": "L", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VL", "AC": "L", "AE": "M", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "H", "AC": "L", "AE": "M", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "M", "AC": "L", "AE": "M", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "M", "AC": "VH", "AE": "VH", "AE_expert": [0, 0, 0, 1, 0]},
+    {"AT": "M", "AC": "H", "AE": "VH", "AE_expert": [0, 0, 0, 1, 0]},
+]
+
+TPN4_val = [
+    {"AT": "VH", "AC": "M",  "AE_expert": [0, 0, 1, 0, 0]},
+    {"AT": "M",  "AC": "VH", "AE_expert": [0, 0, 1, 0, 0]},
+    {"AT": "M",  "AC": "L",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "VL", "AC": "H",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "H",  "AC": "VL", "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "H",  "AC": "L",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "L",  "AC": "VH", "AE_expert": [0, 0, 1, 0, 0]},
+    {"AT": "M",  "AC": "VL", "AE_expert": [1, 0, 0, 0, 0]},
+    {"AT": "L",  "AC": "VL", "AE_expert": [1, 0, 0, 0, 0]},
+    {"AT": "VL", "AC": "VL", "AE_expert": [1, 0, 0, 0, 0]},
+    {"AT": "M",  "AC": "M",  "AE_expert": [0, 0, 1, 0, 0]},
+    {"AT": "H",  "AC": "M",  "AE_expert": [0, 0, 1, 0, 0]}
+]
+
+TPN5_val = [
+    {"AT": "VL", "AC": "H",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "L",  "AC": "H",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "H",  "AC": "L",  "AE_expert": [0, 0, 0, 1, 0]},
+    {"AT": "L",  "AC": "M",  "AE_expert": [0, 1, 0, 0, 0]},
+    {"AT": "M",  "AC": "L",  "AE_expert": [0, 0, 1, 0, 0]},
+    {"AT": "M",  "AC": "VH", "AE_expert": [0, 0, 0, 1, 0]},
+    {"AT": "VH", "AC": "M",  "AE_expert": [0, 0, 0, 1, 0]},
+    {"AT": "VH", "AC": "L",  "AE_expert": [0, 0, 0, 1, 0]},
+    {"AT": "H",  "AC": "VL", "AE_expert": [0, 0, 1, 0, 0]},
+    {"AT": "L",  "AC": "VH", "AE_expert": [0, 0, 1, 0, 0]},
+    {"AT": "M",  "AC": "H",  "AE_expert": [0, 0, 1, 0, 0]},
+    {"AT": "VL", "AC": "VL", "AE_expert": [1, 0, 0, 0, 0]}
+]
+
+
+def save_validation_csv_auto(file_name, scenarios, pesos_2p, pesos_3p, function_name, variance, repository):
+    import csv
+
+    function = functions[function_name]
+    briers = []
+
+    # Detecta automaticamente se há 2 ou 3 pais
+    exemplo = scenarios[0]
+    n_pais = len([k for k in exemplo if k.startswith("A") and k != "AE_expert"])
+
+    # Define os weights de acordo com a quantidade de pais
+    weights = pesos_3p if n_pais == 3 else pesos_2p
+
+    # Cabeçalho
+    header = (
+        ["VarA", "VarB", "VL_exp", "L_exp", "M_exp", "H_exp", "VH_exp", "VL_calc", "L_calc", "M_calc", "H_calc", "VH_calc", "Brier"]
+        if n_pais == 2 else
+        ["VarA", "VarB", "VarC", "VL_exp", "L_exp", "M_exp", "H_exp", "VH_exp", "VL_calc", "L_calc", "M_calc", "H_calc", "VH_calc", "Brier"]
+    )
+
+    with open(file_name, mode="w", newline="", encoding="utf-8") as csv_file:
+        writer = csv.writer(csv_file, delimiter=';')
+        writer.writerow(header)
+
+        for c in scenarios:
+            estados = [c["AT"], c["AC"]] if n_pais == 2 else [c["AT"], c["AC"], c["AE"]]
+            expected = c["AE_expert"]
+
+            probs = mix_and_transform_with_tnormal(
+                parent_states=estados,
+                weights=weights,
+                repository=repository,
+                variance=variance,
+                func_comb=function
+            )
+
+            brier = mean_squared_error(expected, probs)
+            briers.append(brier)
+
+            esperado_formatado = [str(e) for e in expected]
+            calculado_formatado = [f"{p:.5f}".replace('.', ',') for p in probs]
+            brier_formatado = f"{brier:.5f}".replace('.', ',')
+
+            row = estados + esperado_formatado + calculado_formatado + [brier_formatado]
+            writer.writerow(row)
+
+    mean = round(np.mean(briers), 5)
+    print(f"\n✅ CSV salvo como: {file_name}")
+    print(f"📊 Brier Score médio: {mean}")
+
+
+print("_______________TPN1__________")
+#TPN1
+save_validation_csv_auto(file_name="TPN1_validacao.csv",scenarios=TPN1_val,pesos_2p=[0, 0], pesos_3p=[2,4,2], function_name="WMEAN", variance=0.005, repository=repository)
+print("_______________TPN2__________")
+#TPN2
+save_validation_csv_auto(file_name="TPN2_validacao.csv",scenarios=TPN2_val,pesos_2p=[0, 0], pesos_3p=[2,2,2], function_name="WMIN", variance=0.001, repository=repository)
+print("_______________TPN3__________")
+#TPN3
+save_validation_csv_auto(file_name="TPN3_validacao.csv",scenarios=TPN3_val,pesos_2p=[0, 0], pesos_3p=[5,5,5], function_name="WMIN", variance=0.005, repository=repository)
+print("_______________TPN4__________")
+#TPN4
+save_validation_csv_auto(file_name="TPN4_validacao.csv",scenarios=TPN4_val, pesos_2p=[2,2],pesos_3p=[0, 0, 0], function_name="WMIN", variance=0.005, repository=repository)
+print("_______________TPN5__________")
+#TPN5
+save_validation_csv_auto(file_name="TPN5_validacao.csv",scenarios=TPN5_val, pesos_2p=[1,2],pesos_3p=[0, 0, 0], function_name="WMEAN", variance=0.005, repository=repository)
