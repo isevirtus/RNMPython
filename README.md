@@ -6,12 +6,12 @@ This repository contains the complete implementation of the method proposed in t
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 All files are located inside the `ga_bn_calibration` folder:
 
 ```
-📦 ga_bn_calibration/
+ga_bn_calibration/
 ├── ga_calibration.py             # Genetic Algorithm implementation
 ├── bn_ranked_nodes.py            # RNM-based Bayesian Network implementation
 ├── brute_force.py                # Brute-force calibration (for comparison purposes)
@@ -22,7 +22,7 @@ All files are located inside the `ga_bn_calibration` folder:
 
 ---
 
-## 🧠 Description
+## Description
 
 This project automates the calibration of the **Ranked Nodes Method (RNM)** for Bayesian Networks using a **Genetic Algorithm (GA)** to optimize:
 - Aggregation function (e.g., WMEAN, WMIN, WMAX, MIXMINMAX)
@@ -33,11 +33,11 @@ The optimization goal is to **minimize the Brier Score**, which quantifies the a
 
 ---
 
-## 📊 Data Validation File
+## Data Validation File
 
 The file `data_validation_softcom.xlsx` contains both the input data and all validation analyses. It includes:
 
-### 📌 Node Tabs (`TPN#1` to `TPN#5`)
+### Node Tabs (`TPN#1` to `TPN#5`)
 Each sheet corresponds to a node:
 - `TPN#1 - PBO`: Product Backlog Ordering  
 - `TPN#2 - SR`: Sprint Review Quality  
@@ -63,7 +63,7 @@ Each tab includes:
 
 ---
 
-## 🚀 How to Use
+## How to Use
 
 To execute the calibration process for Ranked Nodes using both the Genetic Algorithm and the Brute-Force method, follow the steps below. **All scripts and resources are located inside the `ga_bn_calibration` folder.**
 
@@ -114,6 +114,6 @@ Results:
 
 ---
 
-## 📜 License and Citation
+## License and Citation
 
 This project is licensed under the GNU General Public License v3.0. You can find the full text of the license in the LICENSE file in this repository.
