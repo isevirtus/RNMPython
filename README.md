@@ -97,7 +97,7 @@ python ga_calibration.py
 Results:
 - Best configuration (function, weights, variance)
 - Brier Score per scenario
-- CSV file: `resultados_ag.csv`
+- CSV file: `ag_results.csv`
 
 ---
 
@@ -112,7 +112,7 @@ python brute_force.py
 Results:
 - Best configuration found
 - Comparison with expert distributions
-- CSV file: `resultados_forca_bruta.csv`
+- CSV file: `bf_results.csv`
 
 ---
 
