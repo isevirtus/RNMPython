@@ -1,4 +1,4 @@
-from bn_as_fitness import mix_and_transform_with_tnormal, repository, functions
+from bn_ranked_nodes import mix_and_transform_with_tnormal, repository, functions
 
 import random       
 import numpy as np
