@@ -1,4 +1,4 @@
-from bn_ranked_nodes import mix_and_transform_with_tnormal, repository, functions
+from bn_as_fitness_v2_translated import mix_and_transform_with_tnormal, repository, functions
 
 import random       
 import numpy as np
@@ -214,6 +214,6 @@ def save_results_csv(individual, filename="ga_results.csv"):
 
             writer.writerow(row)
 
-    print(f"\n✅ CSV saved to: {filename}")
+    print(f"\n CSV saved to: {filename}")
 
 save_results_csv(best_ind)
