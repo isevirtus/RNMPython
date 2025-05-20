@@ -234,28 +234,28 @@ def mix_and_transform_with_tnormal(parent_states, weights, repository, variance,
     if np.sum(weights) <= 0:
         raise ValueError("invalid weights (sum ≤ 0)")
 
-    amostras_por_pai = []
-    for estado in parent_states:
-        if estado not in repository:
-            raise KeyError(f"Estado {estado} not in repository")
-        samples = repository[estado]['samples']
+    samples_by_parent = []
+    for state in parent_states:
+        if state not in repository:
+            raise KeyError(f"Estado {state} not in repository")
+        samples = repository[state]['samples']
         if len(samples) < 10000:
             raise ValueError("less than 10 000 samples")
-        #amostras_por_pai.append(np.random.choice(samples, size=10000, replace=False))
-        amostras_por_pai.append(np.array(samples[:10000]))
+        #samples_by_parent.append(np.random.choice(samples, size=10000, replace=False))
+        samples_by_parent.append(np.array(samples[:10000]))
 
-    intercalado = [item for pair in zip(weights, amostras_por_pai) for item in pair] 
-    valores_continuos = func_comb(*intercalado)
+    intercaled = [item for pair in zip(weights, samples_by_parent) for item in pair] 
+    continuo_values = func_comb(*intercaled)
 
     
-    if (not isinstance(valores_continuos, np.ndarray) or
-        valores_continuos.ndim != 1 or
-        len(valores_continuos) != 10000 or
-        np.any(valores_continuos < 0) or
-        np.any(valores_continuos > 1)):
+    if (not isinstance(continuo_values, np.ndarray) or
+        continuo_values.ndim != 1 or
+        len(continuo_values) != 10000 or
+        np.any(continuo_values < 0) or
+        np.any(continuo_values > 1)):
         raise ValueError("incompatible shape or values returned by func_comb")
 
-    mean = np.mean(valores_continuos)
+    mean = np.mean(continuo_values)
     if variance <= 0:
         variance = 0.0001 
     max_variance = mean * (1 - mean)
@@ -290,8 +290,8 @@ def load_samples_json(file_path='repository.json'):
     with open(file_path, 'r', encoding='utf-8') as f:
         repository = json.load(f)
         
-        for estado in repository:
-            repository[estado]['samples'] = np.array(repository[estado]['samples'])
+        for state in repository:
+            repository[state]['samples'] = np.array(repository[state]['samples'])
         return repository
 
 # Example of use
@@ -380,23 +380,23 @@ TPN5_val = [
 ]
 
 
-def save_validation_csv_auto(file_name, scenarios, pesos_2p, pesos_3p, function_name, variance, repository):
+def save_validation_csv_auto(file_name, scenarios, weight_2p, weight_3p, function_name, variance, repository):
     import csv
 
     function = functions[function_name]
     briers = []
 
-    
-    exemplo = scenarios[0]
-    n_pais = len([k for k in exemplo if k.startswith("A") and k != "AE_expert"])
+    # Detecta automaticamente se há 2 ou 3 parents
+    example = scenarios[0]
+    n_parents = len([k for k in example if k.startswith("A") and k != "AE_expert"])
 
-    # Define weights according to n_pais
-    weights = pesos_3p if n_pais == 3 else pesos_2p
+    # Define os weights de acordo com a quantidade de parents
+    weights = weight_3p if n_parents == 3 else weight_2p
 
     # Cabeçalho
     header = (
         ["VarA", "VarB", "VL_exp", "L_exp", "M_exp", "H_exp", "VH_exp", "VL_calc", "L_calc", "M_calc", "H_calc", "VH_calc", "Brier"]
-        if n_pais == 2 else
+        if n_parents == 2 else
         ["VarA", "VarB", "VarC", "VL_exp", "L_exp", "M_exp", "H_exp", "VH_exp", "VL_calc", "L_calc", "M_calc", "H_calc", "VH_calc", "Brier"]
     )
 
@@ -405,11 +405,11 @@ def save_validation_csv_auto(file_name, scenarios, pesos_2p, pesos_3p, function_
         writer.writerow(header)
 
         for c in scenarios:
-            estados = [c["AT"], c["AC"]] if n_pais == 2 else [c["AT"], c["AC"], c["AE"]]
+            states = [c["AT"], c["AC"]] if n_parents == 2 else [c["AT"], c["AC"], c["AE"]]
             expected = c["AE_expert"]
 
             probs = mix_and_transform_with_tnormal(
-                parent_states=estados,
+                parent_states=states,
                 weights=weights,
                 repository=repository,
                 variance=variance,
@@ -419,30 +419,30 @@ def save_validation_csv_auto(file_name, scenarios, pesos_2p, pesos_3p, function_
             brier = mean_squared_error(expected, probs)
             briers.append(brier)
 
-            esperado_formatado = [str(e) for e in expected]
-            calculado_formatado = [f"{p:.5f}".replace('.', ',') for p in probs]
-            brier_formatado = f"{brier:.5f}".replace('.', ',')
+            expected_formated = [str(e) for e in expected]
+            calculated_formated = [f"{p:.5f}".replace('.', ',') for p in probs]
+            brier_formated = f"{brier:.5f}".replace('.', ',')
 
-            row = estados + esperado_formatado + calculado_formatado + [brier_formatado]
+            row = states + expected_formated + calculated_formated + [brier_formated]
             writer.writerow(row)
 
     mean = round(np.mean(briers), 5)
-    print(f"\n✅ CSV salvo como: {file_name}")
-    print(f"📊 Brier Score médio: {mean}")
+    print(f"\n✅ CSV save as: {file_name}")
+    print(f" Brier Score average: {mean}")
 
 
 print("_______________TPN1__________")
 #TPN1
-save_validation_csv_auto(file_name="TPN1_validacao.csv",scenarios=TPN1_val,pesos_2p=[0, 0], pesos_3p=[2,4,2], function_name="WMEAN", variance=0.005, repository=repository)
+save_validation_csv_auto(file_name="TPN1_validacao.csv",scenarios=TPN1_val,weight_2p=[0, 0], weight_3p=[2,4,2], function_name="WMEAN", variance=0.005, repository=repository)
 print("_______________TPN2__________")
 #TPN2
-save_validation_csv_auto(file_name="TPN2_validacao.csv",scenarios=TPN2_val,pesos_2p=[0, 0], pesos_3p=[2,2,2], function_name="WMIN", variance=0.001, repository=repository)
+save_validation_csv_auto(file_name="TPN2_validacao.csv",scenarios=TPN2_val,weight_2p=[0, 0], weight_3p=[2,2,2], function_name="WMIN", variance=0.001, repository=repository)
 print("_______________TPN3__________")
 #TPN3
-save_validation_csv_auto(file_name="TPN3_validacao.csv",scenarios=TPN3_val,pesos_2p=[0, 0], pesos_3p=[5,5,5], function_name="WMIN", variance=0.005, repository=repository)
+save_validation_csv_auto(file_name="TPN3_validacao.csv",scenarios=TPN3_val,weight_2p=[0, 0], weight_3p=[5,5,5], function_name="WMIN", variance=0.005, repository=repository)
 print("_______________TPN4__________")
 #TPN4
-save_validation_csv_auto(file_name="TPN4_validacao.csv",scenarios=TPN4_val, pesos_2p=[2,2],pesos_3p=[0, 0, 0], function_name="WMIN", variance=0.005, repository=repository)
+save_validation_csv_auto(file_name="TPN4_validacao.csv",scenarios=TPN4_val, weight_2p=[2,2],weight_3p=[0, 0, 0], function_name="WMIN", variance=0.005, repository=repository)
 print("_______________TPN5__________")
 #TPN5
-save_validation_csv_auto(file_name="TPN5_validacao.csv",scenarios=TPN5_val, pesos_2p=[1,2],pesos_3p=[0, 0, 0], function_name="WMEAN", variance=0.005, repository=repository)
+save_validation_csv_auto(file_name="TPN5_validacao.csv",scenarios=TPN5_val, weight_2p=[1,2],weight_3p=[0, 0, 0], function_name="WMEAN", variance=0.005, repository=repository)
